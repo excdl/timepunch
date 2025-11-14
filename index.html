@@ -10,7 +10,7 @@
     body { font-family: Arial, sans-serif; text-align:center; padding: 20px; background:#f4f4f9; }
     #ipStatus { margin-top:10px; font-weight:bold; }
     .company { color: green; }
-    .unknown { color: red; }
+    .unknown { color: blue; }
     #countdownWrapper { margin-top:20px; width:80%; height:30px; background:#ddd; border-radius:15px; overflow:hidden; margin-left:auto; margin-right:auto; position:relative; display:none; }
     #countdownBar { height:100%; background:#3498db; width:100%; transition: width 1s linear; position:absolute; top:0; left:0; }
     #countdownText { position:relative; z-index:2; font-weight:bold; color:white; line-height:30px; }
@@ -30,7 +30,7 @@
   </div>
 
   <script>
-    const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbx2X5rC1Cv5aslXU1X4hFaxCi0qsUrTLhk2eQ45fs6y6MaXt0e6OcFEpWfB8Vcf6-Mm/exec"; // Web App URL
+    const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbzWk5hG2odbIvuUnKx41P4pXD89jKPfpRZZz2gibaSdP2Mf_EREj__GfJ6zqFtUmQSb/exec"; // Apps Script 部署 URL
     const COMPANY_IPS = ["43.227.24.78","43.226.232.126"];
 
     async function getUserIP() {
@@ -38,17 +38,19 @@
         const res = await fetch("https://api.ipify.org?format=json");
         const data = await res.json();
         return data.ip;
-      } catch { return "未知"; }
+      } catch {
+        return "未知";
+      }
     }
 
     function displayIPStatus(ip) {
-      const ipEl = document.getElementById("ipStatus");
+      const el = document.getElementById("ipStatus");
       if(COMPANY_IPS.includes(ip)){
-        ipEl.textContent = `已連接公司網路: ${ip}`;
-        ipEl.className = "company";
+        el.textContent = "已連接公司網路: " + ip;
+        el.className = "company";
       } else {
-        ipEl.textContent = `不明連線: ${ip}`;
-        ipEl.className = "unknown";
+        el.textContent = "非公司網路: " + ip;
+        el.className = "unknown";
       }
     }
 
@@ -78,7 +80,7 @@
           countdownBar.style.width = "100%";
           countdownText.textContent = "打卡中...";
 
-          let duration = 4;
+          let duration = 4; // 4秒倒數
           const interval = setInterval(() => {
             duration--;
             countdownBar.style.width = (duration/4)*100 + "%";
@@ -118,16 +120,10 @@
             }
 
             btn.disabled = false;
-          }, 4000);
+          }, 4000); // 倒數結束後才發送打卡
         });
       }
     }
-
-    window.onload = initLIFF;
-  </script>
-</body>
-</html>
-
 
     window.onload = initLIFF;
   </script>
