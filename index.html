@@ -1,37 +1,21 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>奇可智能打卡系統</title>
+  <meta charset="UTF-8">
+  <title>奇可智能打卡</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
-    body { font-family: Arial, sans-serif; text-align:center; padding: 20px; background:#f4f4f9; }
-    #ipStatus { margin-top:10px; font-weight:bold; }
-    .company { color: green; }
-    .unknown { color: blue; }
-    #countdownWrapper { margin-top:20px; width:80%; height:30px; background:#ddd; border-radius:15px; overflow:hidden; margin-left:auto; margin-right:auto; position:relative; display:none; }
-    #countdownBar { height:100%; background:#3498db; width:100%; transition: width 1s linear; position:absolute; top:0; left:0; }
-    #countdownText { position:relative; z-index:2; font-weight:bold; color:white; line-height:30px; }
-    button { font-size: 18px; padding: 10px 20px; margin-top: 20px; cursor:pointer; border:none; border-radius:10px; background: linear-gradient(145deg, #4CAF50, #2ecc71); color:white; }
-    button:disabled { background:#aaa; cursor:not-allowed; }
+    body { font-family: Arial; text-align:center; padding:20px; }
+    button { padding:10px 20px; font-size:18px; }
   </style>
 </head>
 <body>
   <h2>奇可智能打卡系統</h2>
-  <p id="userInfo">正在取得使用者資訊...</p>
-  <p id="ipStatus">正在取得 IP 地址...</p>
-  <button id="clockInBtn" disabled>打卡</button>
-
-  <div id="countdownWrapper">
-    <div id="countdownBar"></div>
-    <div id="countdownText">打卡中...</div>
-  </div>
+  <button id="clockInBtn">打卡</button>
 
   <script>
-    const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbzWk5hG2odbIvuUnKx41P4pXD89jKPfpRZZz2gibaSdP2Mf_EREj__GfJ6zqFtUmQSb/exec"; // Apps Script 部署 URL
-    const COMPANY_IPS = ["43.227.24.78","43.226.232.126"];
+    const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbzpZcuqiDC-YXwprzzGkzACgIgQoe_iHIs4juYgnWNfk7tdOFcVy4tKrec50_68wqDG/exec";
 
     async function getUserIP() {
       try {
@@ -43,91 +27,50 @@
       }
     }
 
-    function displayIPStatus(ip) {
-      const el = document.getElementById("ipStatus");
-      if(COMPANY_IPS.includes(ip)){
-        el.textContent = "已連接公司網路: " + ip;
-        el.className = "company";
-      } else {
-        el.textContent = "非公司網路: " + ip;
-        el.className = "unknown";
-      }
-    }
+    async function clockIn() {
+      const btn = document.getElementById("clockInBtn");
+      btn.disabled = true;
 
-    async function initLIFF() {
-      await liff.init({ liffId: "2008493252-eAMXGMPd" });
-      if(!liff.isLoggedIn()) liff.login();
-      else {
+      try {
+        await liff.init({ liffId: "2008493252-eAMXGMPd" });
+        if (!liff.isLoggedIn()) liff.login();
+
         const profile = await liff.getProfile();
         const lineId = profile.userId;
         const name = profile.displayName;
 
-        document.getElementById("userInfo").textContent = `歡迎, ${name}`;
-        const btn = document.getElementById("clockInBtn");
-        btn.disabled = false;
-
         const ip = await getUserIP();
-        displayIPStatus(ip);
+        const now = new Date();
+        const date = now.toLocaleDateString("zh-TW");
+        const time = now.toLocaleTimeString("zh-TW");
 
-        btn.addEventListener("click", async () => {
-          btn.disabled = true;
-
-          const countdownWrapper = document.getElementById("countdownWrapper");
-          const countdownBar = document.getElementById("countdownBar");
-          const countdownText = document.getElementById("countdownText");
-
-          countdownWrapper.style.display = "block";
-          countdownBar.style.width = "100%";
-          countdownText.textContent = "打卡中...";
-
-          let duration = 4; // 4秒倒數
-          const interval = setInterval(() => {
-            duration--;
-            countdownBar.style.width = (duration/4)*100 + "%";
-            if(duration<=0) clearInterval(interval);
-          }, 1000);
-
-          setTimeout(async () => {
-            const now = new Date();
-            const date = now.toLocaleDateString("zh-TW");
-            const time = now.toLocaleTimeString("zh-TW");
-
-            try {
-              const res = await fetch(API_ENDPOINT, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ lineId, name, ip, date, time })
-              });
-              const data = await res.json();
-
-              countdownWrapper.style.display = "none";
-
-              if(data.success){
-                Swal.fire({
-                  icon: "success",
-                  title: "🎉 打卡成功!",
-                  html: `時間: ${time}`,
-                  timer: 3000,
-                  showConfirmButton: false,
-                  backdrop: `rgba(0,0,0,0.5) url("https://i.imgur.com/3pEHqKf.gif") center center / cover no-repeat`
-                });
-              } else {
-                Swal.fire("⚠ 打卡失敗", data.message, "error");
-              }
-            } catch(err){
-              countdownWrapper.style.display = "none";
-              Swal.fire("⚠ 發生錯誤", err.message, "error");
-            }
-
-            btn.disabled = false;
-          }, 4000); // 倒數結束後才發送打卡
+        const res = await fetch(API_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ date, time, lineId, name, ip })
         });
+
+        const data = await res.json();
+
+        Swal.fire({
+          icon: data.success ? "success" : "error",
+          title: data.success ? "🎉 打卡成功" : "⚠ 打卡失敗",
+          text: data.message,
+          timer: 3000,
+          showConfirmButton: false
+        });
+
+      } catch (err) {
+        Swal.fire("⚠ 發生錯誤", err.message || err, "error");
+      } finally {
+        btn.disabled = false;
       }
     }
 
-    window.onload = initLIFF;
+    document.getElementById("clockInBtn").addEventListener("click", clockIn);
   </script>
 </body>
 </html>
+
 
 
