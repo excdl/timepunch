@@ -1,22 +1,21 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>奇可智能打卡系統</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     body { font-family: Arial, sans-serif; text-align:center; padding: 20px; background:#f4f4f9; }
     #ipStatus { margin-top:10px; font-weight:bold; }
-    button { font-size: 18px; padding: 10px 20px; margin-top: 20px; cursor:pointer; border:none; border-radius:10px; background: linear-gradient(145deg, #4CAF50, #2ecc71); color:white; }
-    button:disabled { background:#aaa; cursor:not-allowed; }
-    #countdownWrapper { margin-top:20px; width:80%; height:30px; background:#ddd; border-radius:15px; overflow:hidden; margin:auto; display:none; position:relative; }
+    .company { color: green; }
+    .unknown { color: red; }
+    #countdownWrapper { margin-top:20px; width:80%; height:30px; background:#ddd; border-radius:15px; overflow:hidden; margin-left:auto; margin-right:auto; position:relative; display:none; }
     #countdownBar { height:100%; background:#3498db; width:100%; transition: width 1s linear; position:absolute; top:0; left:0; }
     #countdownText { position:relative; z-index:2; font-weight:bold; color:white; line-height:30px; }
-    table { margin:20px auto; border-collapse: collapse; width:80%; background:white; }
-    th, td { border:1px solid #ccc; padding:8px; }
-    th { background:#3498db; color:white; }
+    button { font-size: 18px; padding: 10px 20px; margin-top: 20px; cursor:pointer; border:none; border-radius:10px; background: linear-gradient(145deg, #4CAF50, #2ecc71); color:white; }
+    button:disabled { background:#aaa; cursor:not-allowed; }
   </style>
 </head>
 <body>
@@ -30,25 +29,10 @@
     <div id="countdownText">打卡中...</div>
   </div>
 
-  <h3>今日打卡紀錄</h3>
-  <table id="recordTable">
-    <thead>
-      <tr>
-        <th>日期</th>
-        <th>時間</th>
-        <th>姓名</th>
-        <th>IP</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr><td colspan="4">尚無紀錄</td></tr>
-    </tbody>
-  </table>
-
   <script>
-    const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbwvb6PSq3AvPWTgyxxuZejiHdrKJnlOYCZqjrMykfV9hNR3AfudjEl2gyATqGyLYPGl/exec"; // 改成你的 GAS Web App ID
-    const LIFF_ID = "2008493252-eAMXGMPd"; // 改成你的 LIFF ID
-    const COMPANY_IPS = ["43.227.24.78","43.226.232.126"]; // 公司 IP
+    // 改成你的 GAS Web App URL
+    const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbxd2JqHJOdJvjKRRqCOQ6CoTx-Y0GlMGUKDrknSmz1wejkq-252p85xcX558iRl5P19/exec";
+    const COMPANY_IPS = ["43.227.24.78","43.226.232.126"];
 
     async function getUserIP() {
       try {
@@ -60,46 +44,19 @@
       }
     }
 
-    function displayIPStatus(ip){
+    function displayIPStatus(ip) {
       const ipEl = document.getElementById("ipStatus");
-      const btn = document.getElementById("clockInBtn");
       if(COMPANY_IPS.includes(ip)){
-        ipEl.textContent = `✅ 已連接公司網路: ${ip}`;
-        ipEl.style.color = "green";
-        btn.disabled = false;
+        ipEl.textContent = `已連接公司網路: ${ip}`;
+        ipEl.className = "company";
       } else {
-        ipEl.textContent = `❌ 非公司網路: ${ip}，無法打卡`;
-        ipEl.style.color = "red";
-        btn.disabled = true;
+        ipEl.textContent = `不明連線: ${ip}`;
+        ipEl.className = "unknown";
       }
     }
 
-    function updateRecordTable(records){
-      const tbody = document.querySelector("#recordTable tbody");
-      tbody.innerHTML = "";
-      if(records.length === 0){
-        tbody.innerHTML = "<tr><td colspan='4'>尚無紀錄</td></tr>";
-        return;
-      }
-      records.forEach(r=>{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${r.date}</td><td>${r.time}</td><td>${r.name}</td><td>${r.ip}</td>`;
-        tbody.appendChild(tr);
-      });
-    }
-
-    async function fetchRecords(lineId){
-      try {
-        const res = await fetch(API_ENDPOINT + "?lineId=" + lineId);
-        const data = await res.json();
-        if(data.success) updateRecordTable(data.records);
-      } catch(err){
-        console.error("抓取紀錄失敗", err);
-      }
-    }
-
-    async function initLIFF(){
-      await liff.init({ liffId: LIFF_ID });
+    async function initLIFF() {
+      await liff.init({ liffId: "2008493252-eAMXGMPd" });
       if(!liff.isLoggedIn()) liff.login();
       else {
         const profile = await liff.getProfile();
@@ -107,15 +64,13 @@
         const name = profile.displayName;
 
         document.getElementById("userInfo").textContent = `歡迎, ${name}`;
+        const btn = document.getElementById("clockInBtn");
+        btn.disabled = false;
 
         const ip = await getUserIP();
         displayIPStatus(ip);
 
-        // 顯示今日紀錄
-        fetchRecords(lineId);
-
-        document.getElementById("clockInBtn").addEventListener("click", async () => {
-          const btn = document.getElementById("clockInBtn");
+        btn.addEventListener("click", async () => {
           btn.disabled = true;
 
           const countdownWrapper = document.getElementById("countdownWrapper");
@@ -126,11 +81,11 @@
           countdownBar.style.width = "100%";
           countdownText.textContent = "打卡中...";
 
-          let duration = 4; // 4秒倒數
+          let duration = 4;
           const interval = setInterval(() => {
             duration--;
             countdownBar.style.width = (duration/4)*100 + "%";
-            if(duration <= 0) clearInterval(interval);
+            if(duration<=0) clearInterval(interval);
           }, 1000);
 
           setTimeout(async () => {
@@ -154,10 +109,9 @@
                   title: "🎉 打卡成功!",
                   html: `時間: ${time}`,
                   timer: 3000,
-                  showConfirmButton: false
+                  showConfirmButton: false,
+                  backdrop: `rgba(0,0,0,0.5) url("https://i.imgur.com/3pEHqKf.gif") center center / cover no-repeat`
                 });
-                // 更新表格
-                fetchRecords(lineId);
               } else {
                 Swal.fire("⚠ 打卡失敗", data.message, "error");
               }
@@ -165,6 +119,7 @@
               countdownWrapper.style.display = "none";
               Swal.fire("⚠ 發生錯誤", err.message, "error");
             }
+
             btn.disabled = false;
           }, 4000);
         });
@@ -175,4 +130,5 @@
   </script>
 </body>
 </html>
+
 
