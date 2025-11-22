@@ -103,7 +103,6 @@ body {
     border-radius:10px;
     background:linear-gradient(145deg,#8e44ad,#663399);
     color:white;
-    display:block; /* 永遠顯示 */
     width:100%;
     cursor:pointer;
     border:none;
@@ -147,14 +146,14 @@ body {
         <div id="todayRecords">今日打卡紀錄：</div>
     </div>
 
-    <button id="btnApprove">管理者</button>
+    <button id="btnApprove">管理者修改密碼</button>
 </div>
 
 <script>
 const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbxzJdLpaBcvkL2EJD8tgqodKbd-RkEmS4oprqLLxpeDCzOjno4UfvzDWpO2AHPNzdBlfA/exec"; 
 const COMPANY_IPS = ["27.240.227.0"];
+const MANAGERS = ["U5362e40671c45e4c35629ff19163c414"];
 
-// ===== 管理者固定帳號 =====
 const MANAGER_ACCOUNT = "admin";
 const MANAGER_PASSWORD = "Ab1Cd2Ef3Gh4Ij5K";
 const MANAGER_NEED_CHANGE = true;
@@ -203,7 +202,8 @@ async function updateUserInfo() {
     window.userName = profile.displayName;
 
     document.getElementById("userInfo").textContent = `${window.userName} 您好`;
-    
+    document.getElementById("btnApprove").style.display = MANAGERS.includes(window.userId) ? "block" : "none";
+
     const s = document.getElementById("statusInfo");
     const isCompany = COMPANY_IPS.includes(ip);
     s.textContent = isCompany ? "公司網路" : "非公司網路";
@@ -222,7 +222,7 @@ async function updateUserInfo() {
 // ===== 首次登入檢查管理者 =====
 async function checkManager() {
     try {
-        await fetch(API_ENDPOINT, {
+        const res = await fetch(API_ENDPOINT, {
             method: "POST",
             body: JSON.stringify({
                 action: "registerManager",
@@ -235,7 +235,8 @@ async function checkManager() {
                 ip: await getIP()
             })
         });
-        // 不彈提示
+        const data = await res.json();
+        console.log("Manager register:", data);
     } catch(err){ console.error(err); }
 }
 
@@ -311,15 +312,55 @@ async function searchDateRecords(){
 
 btnStart.onclick=()=>performClockIn("上班");
 btnEnd.onclick=()=>performClockIn("下班");
-document.getElementById("btnApprove").onclick=()=>{
-    // 點擊管理者按鈕才導向修改密碼
-    window.location.href="/managerChangePassword.html";
+
+// ===== 管理者修改密碼彈窗 =====
+document.getElementById("btnApprove").onclick = async () => {
+    if(!window.userReady){
+        Swal.fire({icon:"info", title:"請稍候", text:"使用者資料尚未載入", timer:1500, showConfirmButton:false});
+        return;
+    }
+
+    const { value: newPassword } = await Swal.fire({
+        title: '管理者修改密碼',
+        input: 'password',
+        inputLabel: '請輸入新密碼',
+        inputPlaceholder: '輸入新密碼',
+        inputAttributes: {
+            maxlength: 20,
+            autocapitalize: 'off',
+            autocorrect: 'off'
+        },
+        showCancelButton: true
+    });
+
+    if(newPassword){
+        try {
+            const res = await fetch(API_ENDPOINT, {
+                method: "POST",
+                body: JSON.stringify({
+                    action: "changeManagerPassword",
+                    account: MANAGER_ACCOUNT,
+                    newPassword: newPassword,
+                    userId: window.userId
+                })
+            });
+            const data = await res.json();
+            if(data.success){
+                Swal.fire({ icon: "success", title: "修改成功", html: `管理者密碼已更新`, showConfirmButton: true });
+            } else {
+                Swal.fire({icon:"error", title:"修改失敗", text:data.message||"請稍後再試"});
+            }
+        } catch(err){
+            console.error(err);
+            Swal.fire({icon:"error", title:"修改失敗", text:"伺服器錯誤"});
+        }
+    }
 };
 
 // ===== 初始化 =====
 window.onload=async()=>{
     await updateUserInfo();
-    await checkManager(); // 確保管理者已建立
+    await checkManager();
     await updateTodayRecords();
 };
 </script>
